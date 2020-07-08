@@ -1,0 +1,22 @@
+{
+  "name": "rerun-obs",
+  "version": "1.0.0",
+  "description": "Node bindings for a small part of the LibOBS C library. Used by the Rerun project.",
+  "gypfile": true,
+  "scripts": {
+    "build": "node-gyp --debug build",
+    "build-release": "node-gyp build",
+    "rebuild": "node-gyp --debug rebuild",
+    "clean": "node-gyp clean"
+  },
+  "author": "Chap Callanan",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^14.0.13",
+    "bindings": "^1.5.0",
+    "node-addon-api": "^3.0.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^7.0.0"
+  }
+}
