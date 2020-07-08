@@ -12,7 +12,6 @@ class OBSScene : public Napi::ObjectWrap<OBSScene>
         static void NapiInit(Napi::Env env, Napi::Object exports);
 
         OBSScene(const Napi::CallbackInfo& info);
-        ~OBSScene();
 
         Napi::Value getName(const Napi::CallbackInfo &info);
         

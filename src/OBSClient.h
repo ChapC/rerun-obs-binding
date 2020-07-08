@@ -24,7 +24,7 @@ class OBSClient : public Napi::ObjectWrap<OBSClient>
 
         static obs_data_t* createDataFromJS(Napi::Object jsObj);
             
-    private: //Rerun only uses one output, service, audio encoder and video encoder
+    private: //Rerun only uses one output, service, audio encoder, video encoder and scene
         obs_output_t* rtmpOut = NULL;
         obs_service_t* rtmpServ = NULL;
         obs_encoder_t* vEncode = NULL;

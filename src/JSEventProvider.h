@@ -10,14 +10,12 @@ struct JSCallback
     Napi::ThreadSafeFunction callbackFunction;
 };
 
-//Allows promise-based events to be sent to the JS side
+//Allows callbacks to be sent from C++ to JS code
 class JSEventProvider
 {
     public:
         Napi::Value on(const Napi::CallbackInfo& info);
         void off(const Napi::CallbackInfo& info);
-
-        ~JSEventProvider();
 
     protected:
         void triggerJSEvent(std::string eventName);
@@ -28,8 +26,6 @@ class JSEventProvider
         std::map<uint32_t, std::string> listenerIdMap;
         //Maps event name to list of listeners
         std::map<std::string, std::vector<JSCallback>> listeners;
-
-        std::string nameis;
 };
 
 #endif

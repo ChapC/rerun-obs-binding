@@ -72,8 +72,6 @@ void OBSSource::stretchToFill()
     }
     vec2 fullScreenBounds = {(float)vInfo.base_width, (float)vInfo.base_height};
     obs_sceneitem_set_bounds(sceneItem, &fullScreenBounds);
-
-    //obs_sceneitem_release(sceneItem);
 }
 
 //Accepts source name, source type and source settings
@@ -125,7 +123,7 @@ Napi::Value OBSSource::on(const Napi::CallbackInfo &info)
     }
 
     std::string eventName = info[0].As<Napi::String>();
-    signal_handler_t *sourceSignaller = obs_source_get_signal_handler(this->sourceRef);
+    signal_handler_t *sourceSignalHandler = obs_source_get_signal_handler(this->sourceRef);
 
     //Let JSEventProvider store the JS listener
     Napi::Value napiListenerId = JSEventProvider::on(info);
@@ -137,9 +135,42 @@ Napi::Value OBSSource::on(const Napi::CallbackInfo &info)
     //Store the signal callback data in a map so it can be deleted later
     signalCallbackDataMap.insert({ listenerId, jsCallback });
 
-    signal_handler_connect(sourceSignaller, eventName.c_str(), obsSignalRepeater, jsCallback);
+    signal_handler_connect(sourceSignalHandler, eventName.c_str(), obsSignalRepeater, jsCallback);
 
     return napiListenerId;
+}
+
+void OBSSource::off(const Napi::CallbackInfo &info) 
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() != 1) {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+    if (!info[0].IsNumber()) {
+        throw Napi::Error::New(env, "Invalid arguments"); 
+    }
+
+    //Let JSEventProvider do its cleanup
+    JSEventProvider::off(info);
+
+    //Delete the callback data for this listener if it still exists
+    uint32_t listenerId = info[0].As<Napi::Number>().Uint32Value();
+
+    auto idDataPair = signalCallbackDataMap.find(listenerId);
+    if (idDataPair == signalCallbackDataMap.end()) {
+        return; //This listener is either invalid or its callback has already been deleted
+    }
+
+    OBSSignalCallbackData* callbackData = idDataPair->second;
+
+    //Disconnect the obs signal handler
+    signal_handler_t *sourceSignalHandler = obs_source_get_signal_handler(this->sourceRef);
+    signal_handler_disconnect(sourceSignalHandler, callbackData->eventName.c_str(), obsSignalRepeater, callbackData);
+
+    signalCallbackDataMap.erase(idDataPair);
+    delete callbackData;
 }
 
 void OBSSource::obsSignalRepeater(void* customData, calldata_t* signalData)
@@ -162,13 +193,9 @@ void OBSSource::NapiInit(Napi::Env env, Napi::Object exports)
         InstanceMethod("setEnabled", &OBSSource::setEnabled), 
         InstanceMethod("updateSettings", &OBSSource::updateSettings),
         //JSEventProvider
-        InstanceMethod("on", &OBSSource::on), InstanceMethod("off", &OBSSource::off),
+        InstanceMethod("on", &OBSSource::on), InstanceMethod("off", &OBSSource::off)
     });
 
     OBSSource::constructor = Napi::Persistent(constructFunc);
     OBSSource::constructor.SuppressDestruct();
-}
-
-OBSSource::~OBSSource() {
-    int i = 1;
 }

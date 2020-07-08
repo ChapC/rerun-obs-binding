@@ -21,7 +21,6 @@ Napi::Value JSEventProvider::on(const Napi::CallbackInfo &info)
     //Add to the list of listeners for the event
     listeners[eventName].push_back({ listenerId, Napi::ThreadSafeFunction::New(env, callback, "JSEventProv", 0, 1) });
     
-    nameis = "jeff";
     //Return the listenerId (can be used with off() to cancel this listener)
     return Napi::Number::New(env, listenerId);
 }
@@ -42,7 +41,7 @@ void JSEventProvider::off(const Napi::CallbackInfo &info)
     //Find the event that this listener was registered for
     auto idEventPair = listenerIdMap.find(listenerId);
     if (idEventPair == listenerIdMap.end()) {
-        return; //This listener is either invalid or already cancelled
+        return; //This listener is either invalid or has already been cancelled
     }
 
     std::string eventName = idEventPair->second;
@@ -73,13 +72,9 @@ void JSEventProvider::triggerJSEvent(std::string eventName)
     std::vector<JSCallback> callbacks = eventCBListPair->second;
     //Trigger each callback
     for (int i = 0; i < callbacks.size(); i++) {
-        Napi::ThreadSafeFunction func = callbacks.at(i).callbackFunction;
+        Napi::ThreadSafeFunction func = callbacks.at(i).callbackFunction; //OBS calls signal callbacks on a separate thread, hence the need for acquire and release calls
         func.Acquire();
         func.BlockingCall(mainThreadCallback);
         func.Release();
     }
-}
-
-JSEventProvider::~JSEventProvider() {
-    int i = 1;
 }

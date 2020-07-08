@@ -7,7 +7,7 @@
 
 OBSClient::OBSClient(const Napi::CallbackInfo &info) : Napi::ObjectWrap<OBSClient>(info) {}
 
-//Launch the OBS process with the specified settings and initialize the video and audio systems
+//Launch the OBS thread with the specified settings and initialize the video and audio systems
 Napi::Value OBSClient::init(const Napi::CallbackInfo &info)
 {
  	Napi::Env env = info.Env(); //The stack context of this method call
@@ -84,7 +84,7 @@ Napi::Value OBSClient::init(const Napi::CallbackInfo &info)
 
 	//Rerun only uses one scene in OBS. Create it now
 	Napi::Object mainScene = OBSScene::constructor.New({Napi::String::New(env, "MainScene"), Napi::Number::New(env, 0)}).As<Napi::Object>();
-	mainSceneObj = Napi::ObjectReference::New(mainScene, 1);
+	mainSceneObj = Napi::ObjectReference::New(mainScene, 1); //Maintains a reference to the scene object wrap so it isn't garbage collected by Node
 
 	return Napi::Boolean::New(env, true);
 }

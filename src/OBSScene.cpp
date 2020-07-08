@@ -108,7 +108,3 @@ void OBSScene::NapiInit(Napi::Env env, Napi::Object exports)
 
     //exports.Set("OBSScene", constructFunc); This exports the constructor. Don't want!
 }
-
-OBSScene::~OBSScene() {
-    int i = 1;
-}

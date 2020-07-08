@@ -16,7 +16,6 @@ public:
     static void NapiInit(Napi::Env env, Napi::Object exports);
 
     OBSSource(const Napi::CallbackInfo &info);
-    ~OBSSource();
 
     Napi::Value getName(const Napi::CallbackInfo &info);
 
@@ -37,7 +36,7 @@ private:
     std::unordered_map<uint32_t, OBSSignalCallbackData*> signalCallbackDataMap; //Maps JSEventListener ID to OBSSignalCallbackData
 
     Napi::Value on(const Napi::CallbackInfo &info);
-    //Napi::Value off(const Napi::CallbackInfo &info);
+    void off(const Napi::CallbackInfo &info);
 
     static void obsSignalRepeater(void *jsEventData, calldata_t *cd);
 };
