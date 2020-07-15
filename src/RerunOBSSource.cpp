@@ -91,6 +91,11 @@ void RerunOBSSource::changeOrder(const Napi::CallbackInfo &info)
     obs_sceneitem_set_order(sceneItem, static_cast<obs_order_movement>(obsMovementEnum));
 }
 
+void RerunOBSSource::restartMedia(const Napi::CallbackInfo &info)
+{
+    obs_source_media_restart(this->sourceRef);
+}
+
 //Accepts source name, source type and source settings
 RerunOBSSource::RerunOBSSource(const Napi::CallbackInfo &info) : Napi::ObjectWrap<RerunOBSSource>(info)
 {
@@ -210,6 +215,7 @@ void RerunOBSSource::NapiInit(Napi::Env env, Napi::Object exports)
         InstanceMethod("setEnabled", &RerunOBSSource::setEnabled), 
         InstanceMethod("updateSettings", &RerunOBSSource::updateSettings),
         InstanceMethod("changeOrder", &RerunOBSSource::changeOrder),
+        InstanceMethod("restartMedia", &RerunOBSSource::restartMedia),
         //JSEventProvider
         InstanceMethod("on", &RerunOBSSource::on), InstanceMethod("off", &RerunOBSSource::off)
     });

@@ -29,6 +29,7 @@ export interface OBSSource {
     setEnabled(enabled: boolean) : void;
 
     changeOrder(order: OBSOrder) : void;
+    restartMedia() : void;
 
     on(signal: string, callback: (data: any)=>void) : number;
     off(listenerId: number) : void;

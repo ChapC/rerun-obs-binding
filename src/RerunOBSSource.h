@@ -29,6 +29,7 @@ public:
     void stretchToFill();
 
     void changeOrder(const Napi::CallbackInfo &info);
+    void restartMedia(const Napi::CallbackInfo &info);
 
 private:
     obs_source_t *sourceRef;
