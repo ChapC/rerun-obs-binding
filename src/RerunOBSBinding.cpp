@@ -1,7 +1,7 @@
 #include "napi.h"
-#include "OBSClient.h"
-#include "OBSScene.h"
-#include "OBSSource.h"
+#include "RerunOBSClient.h"
+#include "RerunOBSScene.h"
+#include "RerunOBSSource.h"
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
@@ -11,12 +11,12 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
         OBS.init();
     */
 
-    OBSClient::NapiInit(env, exports);
-    OBSScene::NapiInit(env, exports);
-    OBSSource::NapiInit(env, exports);
+    RerunOBSClient::NapiInit(env, exports);
+    RerunOBSScene::NapiInit(env, exports);
+    RerunOBSSource::NapiInit(env, exports);
 
-    Napi::Object rootObj = OBSClient::constructor.New({});
+    Napi::Object rootObj = RerunOBSClient::constructor.New({});
     return rootObj;
 };
 
-NODE_API_MODULE(OBSClient, Init)
+NODE_API_MODULE(RerunOBSClient, Init)

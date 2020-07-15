@@ -1,21 +1,21 @@
-#ifndef OBSSOURCE_H
-#define OBSSOURCE_H
+#ifndef RERUN_OBSSOURCE_H
+#define RERUN_OBSSOURCE_H
 
 #include "napi.h"
 #include "obs.h"
-#include "OBSScene.h"
+#include "RerunOBSScene.h"
 #include "JSEventProvider.h"
 #include <unordered_map>
 
 struct OBSSignalCallbackData;
 
-class OBSSource : public Napi::ObjectWrap<OBSSource>, public JSEventProvider
+class RerunOBSSource : public Napi::ObjectWrap<RerunOBSSource>, public JSEventProvider
 {
 public:
     static Napi::FunctionReference constructor;
     static void NapiInit(Napi::Env env, Napi::Object exports);
 
-    OBSSource(const Napi::CallbackInfo &info);
+    RerunOBSSource(const Napi::CallbackInfo &info);
 
     Napi::Value getName(const Napi::CallbackInfo &info);
 
@@ -44,7 +44,7 @@ private:
 struct OBSSignalCallbackData
 {
     std::string eventName;
-    OBSSource* parent;
+    RerunOBSSource* parent;
     uint32_t* listenerIdPtr;
 };
 

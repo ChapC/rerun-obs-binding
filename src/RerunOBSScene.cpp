@@ -1,8 +1,8 @@
-#include "OBSScene.h"
-#include "OBSSource.h"
+#include "RerunOBSScene.h"
+#include "RerunOBSSource.h"
 
 //Create a source and add it to the scene
-Napi::Value OBSScene::addSource(const Napi::CallbackInfo &info) {
+Napi::Value RerunOBSScene::addSource(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
 
     if (info.Length() != 3) {
@@ -13,10 +13,10 @@ Napi::Value OBSScene::addSource(const Napi::CallbackInfo &info) {
         throw Napi::Error::New(env, "Invalid arguments"); 
     }
 
-    Napi::Object sourceWrap = OBSSource::constructor.New({info[0], info[1], info[2]});
+    Napi::Object sourceWrap = RerunOBSSource::constructor.New({info[0], info[1], info[2]});
     
     //Add to this scene
-    OBSSource* sourceObj = OBSSource::Unwrap(sourceWrap);
+    RerunOBSSource* sourceObj = RerunOBSSource::Unwrap(sourceWrap);
     obs_source_t* source = sourceObj->getSourceRef();
     obs_sceneitem_t* sceneItem = obs_scene_add(this->sceneRef, source);
 
@@ -30,7 +30,7 @@ Napi::Value OBSScene::addSource(const Napi::CallbackInfo &info) {
 }
 
 //Remove a source from the scene and release it
-void OBSScene::removeSource(const Napi::CallbackInfo &info) {
+void RerunOBSScene::removeSource(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
     
     if (info.Length() != 1) {
@@ -42,7 +42,7 @@ void OBSScene::removeSource(const Napi::CallbackInfo &info) {
     }
 
     Napi::Object sourceWrap = info[0].As<Napi::Object>();
-    OBSSource* sourceObj = OBSSource::Unwrap(sourceWrap);
+    RerunOBSSource* sourceObj = RerunOBSSource::Unwrap(sourceWrap);
     obs_source_remove(sourceObj->getSourceRef());
     obs_source_release(sourceObj->getSourceRef());
 
@@ -56,7 +56,7 @@ void OBSScene::removeSource(const Napi::CallbackInfo &info) {
     }
 }
 
-Napi::Value OBSScene::getName(const Napi::CallbackInfo &info) {
+Napi::Value RerunOBSScene::getName(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
 
     obs_source_t* scene_source = obs_scene_get_source(sceneRef);
@@ -65,7 +65,7 @@ Napi::Value OBSScene::getName(const Napi::CallbackInfo &info) {
 }
 
 //Accepts sceneName: string, outputChannel: number (0-63)
-OBSScene::OBSScene(const Napi::CallbackInfo& info) : Napi::ObjectWrap<OBSScene>(info) {
+RerunOBSScene::RerunOBSScene(const Napi::CallbackInfo& info) : Napi::ObjectWrap<RerunOBSScene>(info) {
     Napi::Env env = info.Env();
     Napi::HandleScope scope(env);
     
@@ -91,20 +91,20 @@ OBSScene::OBSScene(const Napi::CallbackInfo& info) : Napi::ObjectWrap<OBSScene>(
 
 //NAPI initializers
 
-Napi::FunctionReference OBSScene::constructor;
+Napi::FunctionReference RerunOBSScene::constructor;
 
-void OBSScene::NapiInit(Napi::Env env, Napi::Object exports) 
+void RerunOBSScene::NapiInit(Napi::Env env, Napi::Object exports) 
 {
     Napi::HandleScope scope(env);
 
     Napi::Function constructFunc = DefineClass(env, "OBSScene", {
-        InstanceMethod("addSource", &OBSScene::addSource),
-        InstanceMethod("removeSource", &OBSScene::removeSource),
-        InstanceMethod("getName", &OBSScene::getName)
+        InstanceMethod("addSource", &RerunOBSScene::addSource),
+        InstanceMethod("removeSource", &RerunOBSScene::removeSource),
+        InstanceMethod("getName", &RerunOBSScene::getName)
     });
 
-    OBSScene::constructor = Napi::Persistent(constructFunc);
-    OBSScene::constructor.SuppressDestruct();
+    RerunOBSScene::constructor = Napi::Persistent(constructFunc);
+    RerunOBSScene::constructor.SuppressDestruct();
 
     //exports.Set("OBSScene", constructFunc); This exports the constructor. Don't want!
 }

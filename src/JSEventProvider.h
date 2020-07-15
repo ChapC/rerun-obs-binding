@@ -1,5 +1,5 @@
-#ifndef JSEVENTPROV_H
-#define JSEVENTPROV_H
+#ifndef RERUN_JSEVENTPROV_H
+#define RERUN_JSEVENTPROV_H
 
 #include "napi.h"
 #include "map"

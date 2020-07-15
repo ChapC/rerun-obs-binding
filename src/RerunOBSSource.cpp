@@ -1,7 +1,7 @@
-#include "OBSSource.h"
-#include "OBSClient.h"
+#include "RerunOBSSource.h"
+#include "RerunOBSClient.h"
 
-Napi::Value OBSSource::getName(const Napi::CallbackInfo &info)
+Napi::Value RerunOBSSource::getName(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     const char *name = obs_source_get_name(this->sourceRef);
@@ -9,13 +9,13 @@ Napi::Value OBSSource::getName(const Napi::CallbackInfo &info)
     return Napi::String::New(env, name);
 }
 
-Napi::Value OBSSource::isEnabled(const Napi::CallbackInfo &info)
+Napi::Value RerunOBSSource::isEnabled(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     return Napi::Boolean::New(env, obs_source_enabled(this->sourceRef));
 }
 
-void OBSSource::setEnabled(const Napi::CallbackInfo &info)
+void RerunOBSSource::setEnabled(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
@@ -34,7 +34,7 @@ void OBSSource::setEnabled(const Napi::CallbackInfo &info)
     obs_source_set_enabled(this->sourceRef, enabled);
 }
 
-void OBSSource::updateSettings(const Napi::CallbackInfo &info)
+void RerunOBSSource::updateSettings(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
@@ -50,14 +50,14 @@ void OBSSource::updateSettings(const Napi::CallbackInfo &info)
 
     Napi::Object settingsObject = info[0].As<Napi::Object>();
 
-    obs_data_t *updatedSettings = OBSClient::createDataFromJS(settingsObject);
+    obs_data_t *updatedSettings = RerunOBSClient::createDataFromJS(settingsObject);
     obs_source_update(this->sourceRef, updatedSettings);
 
     this->stretchToFill(); //Some sources (like VLC) change their bounds when updated, do not want >:(
 }
 
 const vec2 middleScreenPos = {0, 0};
-void OBSSource::stretchToFill()
+void RerunOBSSource::stretchToFill()
 {
     obs_sceneitem_t *sceneItem = obs_scene_find_source(this->parentScene, obs_source_get_name(this->sourceRef));
     obs_sceneitem_set_pos(sceneItem, &middleScreenPos);
@@ -75,7 +75,7 @@ void OBSSource::stretchToFill()
 }
 
 //Accepts source name, source type and source settings
-OBSSource::OBSSource(const Napi::CallbackInfo &info) : Napi::ObjectWrap<OBSSource>(info)
+RerunOBSSource::RerunOBSSource(const Napi::CallbackInfo &info) : Napi::ObjectWrap<RerunOBSSource>(info)
 {
     Napi::Env env = info.Env();
     Napi::HandleScope scope(env);
@@ -94,7 +94,7 @@ OBSSource::OBSSource(const Napi::CallbackInfo &info) : Napi::ObjectWrap<OBSSourc
     std::string sourceType = info[1].As<Napi::String>();
     Napi::Object settingsObject = info[2].As<Napi::Object>();
 
-    obs_data_t *sourceSettings = OBSClient::createDataFromJS(settingsObject);
+    obs_data_t *sourceSettings = RerunOBSClient::createDataFromJS(settingsObject);
 
     //Create the source
     obs_source_t *source = obs_source_create(sourceType.c_str(), name.c_str(), sourceSettings, NULL);
@@ -108,7 +108,7 @@ OBSSource::OBSSource(const Napi::CallbackInfo &info) : Napi::ObjectWrap<OBSSourc
 }
 
 //Event listeners for this class are hooked up to OBS signals
-Napi::Value OBSSource::on(const Napi::CallbackInfo &info)
+Napi::Value RerunOBSSource::on(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
@@ -140,7 +140,7 @@ Napi::Value OBSSource::on(const Napi::CallbackInfo &info)
     return napiListenerId;
 }
 
-void OBSSource::off(const Napi::CallbackInfo &info) 
+void RerunOBSSource::off(const Napi::CallbackInfo &info) 
 {
     Napi::Env env = info.Env();
 
@@ -173,7 +173,7 @@ void OBSSource::off(const Napi::CallbackInfo &info)
     delete callbackData;
 }
 
-void OBSSource::obsSignalRepeater(void* customData, calldata_t* signalData)
+void RerunOBSSource::obsSignalRepeater(void* customData, calldata_t* signalData)
 {
     OBSSignalCallbackData* callbackData = (OBSSignalCallbackData*)customData;
     callbackData->parent->triggerJSEvent(callbackData->eventName);
@@ -181,21 +181,21 @@ void OBSSource::obsSignalRepeater(void* customData, calldata_t* signalData)
 
 //NAPI initializers
 
-Napi::FunctionReference OBSSource::constructor;
+Napi::FunctionReference RerunOBSSource::constructor;
 
-void OBSSource::NapiInit(Napi::Env env, Napi::Object exports)
+void RerunOBSSource::NapiInit(Napi::Env env, Napi::Object exports)
 {
     Napi::HandleScope scope(env);
 
     Napi::Function constructFunc = DefineClass(env, "OBSScene", {
-        InstanceMethod("getName", &OBSSource::getName), 
-        InstanceMethod("isEnabled", &OBSSource::isEnabled), 
-        InstanceMethod("setEnabled", &OBSSource::setEnabled), 
-        InstanceMethod("updateSettings", &OBSSource::updateSettings),
+        InstanceMethod("getName", &RerunOBSSource::getName), 
+        InstanceMethod("isEnabled", &RerunOBSSource::isEnabled), 
+        InstanceMethod("setEnabled", &RerunOBSSource::setEnabled), 
+        InstanceMethod("updateSettings", &RerunOBSSource::updateSettings),
         //JSEventProvider
-        InstanceMethod("on", &OBSSource::on), InstanceMethod("off", &OBSSource::off)
+        InstanceMethod("on", &RerunOBSSource::on), InstanceMethod("off", &RerunOBSSource::off)
     });
 
-    OBSSource::constructor = Napi::Persistent(constructFunc);
-    OBSSource::constructor.SuppressDestruct();
+    RerunOBSSource::constructor = Napi::Persistent(constructFunc);
+    RerunOBSSource::constructor.SuppressDestruct();
 }

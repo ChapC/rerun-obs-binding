@@ -1,17 +1,17 @@
-#ifndef OBSSCENE_H
-#define OBSSCENE_H
+#ifndef RERUN_OBSSCENE_H
+#define RERUN_OBSSCENE_H
 
 #include "napi.h"
 #include "obs.h"
 
 //NOTE: Currently this binding doesn't expose SceneItems, instead managing them internally. Rerun only ever uses one scene, so there's no need for the distinction.
-class OBSScene : public Napi::ObjectWrap<OBSScene>
+class RerunOBSScene : public Napi::ObjectWrap<RerunOBSScene>
 {
     public:
         static Napi::FunctionReference constructor;
         static void NapiInit(Napi::Env env, Napi::Object exports);
 
-        OBSScene(const Napi::CallbackInfo& info);
+        RerunOBSScene(const Napi::CallbackInfo& info);
 
         Napi::Value getName(const Napi::CallbackInfo &info);
         
