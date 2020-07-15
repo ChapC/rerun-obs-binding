@@ -19,7 +19,7 @@ void RerunOBSSource::setEnabled(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    if (info.Length() != 0)
+    if (info.Length() != 1)
     {
         throw Napi::Error::New(env, "Invalid number of arguments");
     }

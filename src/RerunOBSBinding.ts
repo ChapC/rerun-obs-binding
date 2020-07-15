@@ -3,7 +3,7 @@ const OBSBinding = require('bindings')('RerunOBSBinding.node');
 export interface OBSClient {
     init(video: VideoSettings, audio: AudioSettings, moduleConfigPath: string): boolean;
     loadModule(moduleBinaryPath: string, moduleDataPath: string) : void;
-    setupEncoders(video: EncoderConfig, audio: EncoderConfig) : boolean;
+    setupEncoders(video: EncoderConfig, audio: EncoderConfig) : void;
     shutdown() : void;
 
     startStream(address: string, key: string) : void;
