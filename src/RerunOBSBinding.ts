@@ -10,6 +10,7 @@ export interface OBSClient {
     stopStream() : void;
 
     getMainScene() : OBSScene;
+    openPreviewWindow() : void;
 }
 
 export interface OBSScene {
@@ -27,8 +28,17 @@ export interface OBSSource {
     isEnabled() : boolean;
     setEnabled(enabled: boolean) : void;
 
+    changeOrder(order: OBSOrder) : void;
+
     on(signal: string, callback: (data: any)=>void) : number;
     off(listenerId: number) : void;
+}
+
+export const enum OBSOrder {
+    MOVE_UP = 0,
+    MOVE_DOWN = 1,
+    MOVE_TO_TOP = 2,
+    MOVE_TO_BOTTOM = 3
 }
 
 export const enum SpeakerLayout {

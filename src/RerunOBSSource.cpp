@@ -74,6 +74,23 @@ void RerunOBSSource::stretchToFill()
     obs_sceneitem_set_bounds(sceneItem, &fullScreenBounds);
 }
 
+void RerunOBSSource::changeOrder(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    Napi::HandleScope scope(env);
+    
+    if (info.Length() != 1) throw Napi::Error::New(env, "Invalid number of arguments");
+
+    if (!info[0].IsNumber()) throw Napi::Error::New(env, "Invalid arguments");
+
+    int32_t obsMovementEnum = info[0].As<Napi::Number>().Int32Value();
+
+    if (obsMovementEnum < 0 || obsMovementEnum > 3) throw Napi::Error::New(env, "Invalid enum value");
+
+    obs_sceneitem_t *sceneItem = obs_scene_find_source(this->parentScene, obs_source_get_name(this->sourceRef));
+    obs_sceneitem_set_order(sceneItem, static_cast<obs_order_movement>(obsMovementEnum));
+}
+
 //Accepts source name, source type and source settings
 RerunOBSSource::RerunOBSSource(const Napi::CallbackInfo &info) : Napi::ObjectWrap<RerunOBSSource>(info)
 {
@@ -192,6 +209,7 @@ void RerunOBSSource::NapiInit(Napi::Env env, Napi::Object exports)
         InstanceMethod("isEnabled", &RerunOBSSource::isEnabled), 
         InstanceMethod("setEnabled", &RerunOBSSource::setEnabled), 
         InstanceMethod("updateSettings", &RerunOBSSource::updateSettings),
+        InstanceMethod("changeOrder", &RerunOBSSource::changeOrder),
         //JSEventProvider
         InstanceMethod("on", &RerunOBSSource::on), InstanceMethod("off", &RerunOBSSource::off)
     });

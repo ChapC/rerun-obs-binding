@@ -28,6 +28,8 @@ public:
     void setParentScene(obs_scene_t *parent) { this->parentScene = parent; }
     void stretchToFill();
 
+    void changeOrder(const Napi::CallbackInfo &info);
+
 private:
     obs_source_t *sourceRef;
     obs_scene_t *parentScene;
