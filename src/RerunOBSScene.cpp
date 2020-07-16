@@ -20,7 +20,7 @@ Napi::Value RerunOBSScene::addSource(const Napi::CallbackInfo &info) {
     obs_source_t* source = sourceObj->getSourceRef();
     obs_sceneitem_t* sceneItem = obs_scene_add(this->sceneRef, source);
 
-    sourceObj->setParentScene(this->sceneRef);
+    sourceObj->setSceneItem(sceneItem);
 
     sourceObj->stretchToFill(); //Rerun needs all sources to be stretched to fill */
     

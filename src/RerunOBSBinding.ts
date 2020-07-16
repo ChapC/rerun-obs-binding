@@ -28,8 +28,14 @@ export interface OBSSource {
     isEnabled() : boolean;
     setEnabled(enabled: boolean) : void;
 
+    isVisible() : boolean;
+    setVisible(visible: boolean) : void;
+
     changeOrder(order: OBSOrder) : void;
     restartMedia() : void;
+    playMedia() : void;
+    pauseMedia() : void;
+    stopMedia() : void;
 
     on(signal: string, callback: (data: any)=>void) : number;
     off(listenerId: number) : void;

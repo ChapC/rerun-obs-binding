@@ -4,7 +4,7 @@
 #include "napi.h"
 #include "obs.h"
 
-//NOTE: Currently this binding doesn't expose SceneItems, instead managing them internally. Rerun only ever uses one scene, so there's no need for the distinction.
+//NOTE: Currently this binding doesn't expose SceneItems. Rerun only ever uses one scene and doesn't support source duplication, so there's no need for the distinction. Instead, source objects maintain an internal reference to their SceneItem.
 class RerunOBSScene : public Napi::ObjectWrap<RerunOBSScene>
 {
     public:

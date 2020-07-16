@@ -34,6 +34,30 @@ void RerunOBSSource::setEnabled(const Napi::CallbackInfo &info)
     obs_source_set_enabled(this->sourceRef, enabled);
 }
 
+Napi::Value RerunOBSSource::isVisible(const Napi::CallbackInfo &info)
+{
+    return Napi::Boolean::New(info.Env(), obs_sceneitem_visible(this->sceneItemRef));
+}
+
+void RerunOBSSource::setVisible(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() != 1)
+    {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+    if (!info[0].IsBoolean())
+    {
+        throw Napi::Error::New(env, "Invalid arguments");
+    }
+
+    Napi::Boolean visible = info[0].As<Napi::Boolean>();
+
+    obs_sceneitem_set_visible(this->sceneItemRef, visible);
+}
+
 void RerunOBSSource::updateSettings(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -59,9 +83,8 @@ void RerunOBSSource::updateSettings(const Napi::CallbackInfo &info)
 const vec2 middleScreenPos = {0, 0};
 void RerunOBSSource::stretchToFill()
 {
-    obs_sceneitem_t *sceneItem = obs_scene_find_source(this->parentScene, obs_source_get_name(this->sourceRef));
-    obs_sceneitem_set_pos(sceneItem, &middleScreenPos);
-    obs_sceneitem_set_bounds_type(sceneItem, OBS_BOUNDS_STRETCH);
+    obs_sceneitem_set_pos(this->sceneItemRef, &middleScreenPos);
+    obs_sceneitem_set_bounds_type(this->sceneItemRef, OBS_BOUNDS_STRETCH);
 
     //Get screen height and width
     obs_video_info vInfo = {};
@@ -71,13 +94,12 @@ void RerunOBSSource::stretchToFill()
         return; //Video system not set up
     }
     vec2 fullScreenBounds = {(float)vInfo.base_width, (float)vInfo.base_height};
-    obs_sceneitem_set_bounds(sceneItem, &fullScreenBounds);
+    obs_sceneitem_set_bounds(this->sceneItemRef, &fullScreenBounds);
 }
 
 void RerunOBSSource::changeOrder(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    Napi::HandleScope scope(env);
     
     if (info.Length() != 1) throw Napi::Error::New(env, "Invalid number of arguments");
 
@@ -87,13 +109,27 @@ void RerunOBSSource::changeOrder(const Napi::CallbackInfo &info)
 
     if (obsMovementEnum < 0 || obsMovementEnum > 3) throw Napi::Error::New(env, "Invalid enum value");
 
-    obs_sceneitem_t *sceneItem = obs_scene_find_source(this->parentScene, obs_source_get_name(this->sourceRef));
-    obs_sceneitem_set_order(sceneItem, static_cast<obs_order_movement>(obsMovementEnum));
+    obs_sceneitem_set_order(this->sceneItemRef, static_cast<obs_order_movement>(obsMovementEnum));
 }
 
 void RerunOBSSource::restartMedia(const Napi::CallbackInfo &info)
 {
     obs_source_media_restart(this->sourceRef);
+}
+
+void RerunOBSSource::playMedia(const Napi::CallbackInfo &info)
+{
+    obs_source_media_play_pause(this->sourceRef, false);
+}
+
+void RerunOBSSource::pauseMedia(const Napi::CallbackInfo &info)
+{
+    obs_source_media_play_pause(this->sourceRef, true);
+}
+
+void RerunOBSSource::stopMedia(const Napi::CallbackInfo &info)
+{
+    obs_source_media_stop(this->sourceRef);
 }
 
 //Accepts source name, source type and source settings
@@ -212,10 +248,15 @@ void RerunOBSSource::NapiInit(Napi::Env env, Napi::Object exports)
     Napi::Function constructFunc = DefineClass(env, "OBSScene", {
         InstanceMethod("getName", &RerunOBSSource::getName), 
         InstanceMethod("isEnabled", &RerunOBSSource::isEnabled), 
-        InstanceMethod("setEnabled", &RerunOBSSource::setEnabled), 
+        InstanceMethod("setEnabled", &RerunOBSSource::setEnabled),
+        InstanceMethod("isVisible", &RerunOBSSource::isVisible),
+        InstanceMethod("setVisible", &RerunOBSSource::setVisible),
         InstanceMethod("updateSettings", &RerunOBSSource::updateSettings),
         InstanceMethod("changeOrder", &RerunOBSSource::changeOrder),
         InstanceMethod("restartMedia", &RerunOBSSource::restartMedia),
+        InstanceMethod("playMedia", &RerunOBSSource::playMedia),
+        InstanceMethod("pauseMedia", &RerunOBSSource::pauseMedia),
+        InstanceMethod("stopMedia", &RerunOBSSource::stopMedia),
         //JSEventProvider
         InstanceMethod("on", &RerunOBSSource::on), InstanceMethod("off", &RerunOBSSource::off)
     });
