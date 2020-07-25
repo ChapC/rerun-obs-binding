@@ -2,6 +2,8 @@
 #include "obs.h"
 #include "RerunOBSClient.h"
 #include "RerunOBSScene.h"
+#include "RerunOBSSource.h"
+#include "RerunOBSSceneItem.h"
 #include <iostream>
 #include <thread>
 #include "Windows.h"
@@ -85,8 +87,8 @@ Napi::Value RerunOBSClient::init(const Napi::CallbackInfo &info)
 
 	//Rerun only uses one scene in OBS. Create it now
 	Napi::Object mainScene = RerunOBSScene::constructor.New({Napi::String::New(env, "MainScene"), Napi::Number::New(env, 0)}).As<Napi::Object>();
-	mainSceneObj = Napi::ObjectReference::New(mainScene, 1); //Maintains a reference to the scene object wrap so it isn't garbage collected by Node
-
+	mainSceneRef = Napi::ObjectReference::New(mainScene, 1); //Maintains a reference to the scene object wrap so it isn't garbage collected by Node
+	
 	return Napi::Boolean::New(env, true);
 }
 
@@ -195,7 +197,7 @@ void RerunOBSClient::setupEncoders(const Napi::CallbackInfo &info)
 void RerunOBSClient::shutdown(const Napi::CallbackInfo &info)
 {
 	obs_shutdown();
-	mainSceneObj.Reset();
+	mainSceneRef.Reset();
 }
 
 //Start the RTMP output and stream to the target server
@@ -252,7 +254,61 @@ void RerunOBSClient::stopStream(const Napi::CallbackInfo &info)
 //Create a new scene object
 Napi::Value RerunOBSClient::getMainScene(const Napi::CallbackInfo &info)
 {
-	return mainSceneObj.Value();
+	return mainSceneRef.Value();
+}
+
+//Create a new source object. The source will not be connected to any scene
+Napi::Value RerunOBSClient::createSource(const Napi::CallbackInfo &info)
+{
+	Napi::Env env = info.Env();
+
+    if (info.Length() != 3)
+    {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+	Napi::Object sourceObj = RerunOBSSource::constructor.New({ info[0], info[1], info[2] });
+	RerunOBSSource* source = RerunOBSSource::Unwrap(sourceObj);
+	//Store a reference to the source so Node doesn't destroy it
+	sourceObjectMap[obs_source_get_name(source->getSourceRef())] = Napi::ObjectReference::New(sourceObj , 1);
+	return sourceObj;
+}
+
+//Destroy a source object
+void RerunOBSClient::destroySource(const Napi::CallbackInfo &info)
+{
+	Napi::Env env = info.Env();
+
+    if (info.Length() != 1)
+    {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+	if (!info[0].IsObject()) 
+	{
+		throw Napi::Error::New(env, "Invalid arguments");
+	}
+
+	Napi::Object sourceObj = info[0].As<Napi::Object>();
+	RerunOBSSource* source = RerunOBSSource::Unwrap(sourceObj);
+
+	//Remove the SceneItem reference if it currently exists in the scene
+	Napi::Object mainSceneObj = mainSceneRef.Value();
+	RerunOBSScene* mainScene = RerunOBSScene::Unwrap(mainSceneObj);
+
+	RerunOBSSceneItem* sceneItem = mainScene->findSceneItemForSource(source);
+	if (sceneItem != NULL) mainScene->removeSceneItem(sceneItem);
+
+	//Remove the source in OBS
+	obs_source_remove(source->getSourceRef());
+	obs_source_release(source->getSourceRef());
+
+		
+	//Remove the reference in the global sourceObjects map
+	auto idSourcePair = sourceObjectMap.find(obs_source_get_name(source->getSourceRef()));
+    if (idSourcePair == sourceObjectMap.end()) return; //This source doesn't exist
+	idSourcePair->second.Reset();
+	sourceObjectMap.erase(idSourcePair);
 }
 
 //Convert a JS map of OBSData into an obs_data object
@@ -426,9 +482,21 @@ Napi::FunctionReference RerunOBSClient::constructor;
 void RerunOBSClient::NapiInit(Napi::Env env, Napi::Object exports)
 {
 	Napi::HandleScope scope(env);
-	Napi::Function constructFunc = DefineClass(env, "OBSClient", {InstanceMethod("init", &RerunOBSClient::init), InstanceMethod("loadModule", &RerunOBSClient::loadModule), InstanceMethod("setupEncoders", &RerunOBSClient::setupEncoders), InstanceMethod("shutdown", &RerunOBSClient::shutdown), InstanceMethod("startStream", &RerunOBSClient::startStream), InstanceMethod("stopStream", &RerunOBSClient::stopStream), InstanceMethod("getMainScene", &RerunOBSClient::getMainScene),
+	Napi::Function constructFunc = DefineClass(env, "OBSClient", 
+	{
+		InstanceMethod("init", &RerunOBSClient::init), 
+		InstanceMethod("loadModule", &RerunOBSClient::loadModule), 
+		InstanceMethod("setupEncoders", &RerunOBSClient::setupEncoders), 
+		InstanceMethod("shutdown", &RerunOBSClient::shutdown), 
 
-																  InstanceMethod("openPreviewWindow", &RerunOBSClient::openPreviewWindow)});
+		InstanceMethod("createSource", &RerunOBSClient::createSource),
+		InstanceMethod("destroySource", &RerunOBSClient::destroySource),
+
+		InstanceMethod("startStream", &RerunOBSClient::startStream), 
+		InstanceMethod("stopStream", &RerunOBSClient::stopStream),
+		 
+		InstanceMethod("getMainScene", &RerunOBSClient::getMainScene),
+		InstanceMethod("openPreviewWindow", &RerunOBSClient::openPreviewWindow)});
 	RerunOBSClient::constructor = Napi::Persistent(constructFunc);
 	RerunOBSClient::constructor.SuppressDestruct();
 }

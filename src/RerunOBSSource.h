@@ -3,8 +3,9 @@
 
 #include "napi.h"
 #include "obs.h"
-#include "RerunOBSScene.h"
 #include "JSEventProvider.h"
+#include "RerunOBSSceneItem.h"
+class RerunOBSSceneItem;
 #include <unordered_map>
 
 struct OBSSignalCallbackData;
@@ -21,16 +22,12 @@ public:
 
     Napi::Value isEnabled(const Napi::CallbackInfo &info);
     void setEnabled(const Napi::CallbackInfo &info);
-    Napi::Value isVisible(const Napi::CallbackInfo &info);
-    void setVisible(const Napi::CallbackInfo &info);
 
     void updateSettings(const Napi::CallbackInfo &info);
 
-    obs_source_t *getSourceRef() { return this->sourceRef; }
-    void setSceneItem(obs_sceneitem_t *si) { this->sceneItemRef = si; }
-    void stretchToFill();
+    obs_source_t* getSourceRef() { return this->sourceRef; }
+    void setSceneItem(RerunOBSSceneItem* sceneItem) { this->sceneItemRef = sceneItem; }
 
-    void changeOrder(const Napi::CallbackInfo &info);
     void restartMedia(const Napi::CallbackInfo &info);
     void playMedia(const Napi::CallbackInfo &info);
     void pauseMedia(const Napi::CallbackInfo &info);
@@ -38,12 +35,13 @@ public:
 
 private:
     obs_source_t* sourceRef;
-    obs_sceneitem_t* sceneItemRef;
-
+    RerunOBSSceneItem* sceneItemRef = NULL; //Rerun only uses one scene and doesn't support source duplication, so there will only ever be one SceneItem per source
+    
     //JSEventProvider is extended to provide access to OBS signals
     std::unordered_map<uint32_t, OBSSignalCallbackData*> signalCallbackDataMap; //Maps JSEventListener ID to OBSSignalCallbackData
 
-    Napi::Value on(const Napi::CallbackInfo &info);
+    Napi::Value onNAPI(const Napi::CallbackInfo &info);
+    Napi::Value once(const Napi::CallbackInfo &info);
     void off(const Napi::CallbackInfo &info);
 
     static void obsSignalRepeater(void *jsEventData, calldata_t *cd);

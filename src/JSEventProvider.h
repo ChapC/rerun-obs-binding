@@ -8,14 +8,17 @@ struct JSCallback
 {
     uint32_t listenerId;
     Napi::ThreadSafeFunction callbackFunction;
+    bool once;
 };
 
 //Allows callbacks to be sent from C++ to JS code
 class JSEventProvider
 {
     public:
-        Napi::Value on(const Napi::CallbackInfo& info);
+        Napi::Value onNAPI(const Napi::CallbackInfo& info);
+        uint32_t on(std::string eventName, Napi::ThreadSafeFunction func, bool once = false);
         void off(const Napi::CallbackInfo& info);
+        Napi::Value once(const Napi::CallbackInfo& info);
 
     protected:
         void triggerJSEvent(std::string eventName);

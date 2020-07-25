@@ -6,6 +6,9 @@ export interface OBSClient {
     setupEncoders(video: EncoderConfig, audio: EncoderConfig) : void;
     shutdown() : void;
 
+    createSource(name: string, type: string, settings: OBSDataObject) : OBSSource;
+    destroySource(source: OBSSource) : void;
+
     startStream(address: string, key: string) : void;
     stopStream() : void;
 
@@ -16,8 +19,18 @@ export interface OBSClient {
 export interface OBSScene {
     getName() : string;
 
-    addSource(name: string, type: string, settings: OBSDataObject) : OBSSource;
-    removeSource(source: OBSSource) : void;
+    addSource(source: OBSSource) : OBSSceneItem;
+    removeSceneItem(sceneItem: OBSSceneItem) : void;
+
+    findSceneItemForSource(source: OBSSource) : OBSSceneItem | null;
+}
+
+export interface OBSSceneItem {
+    isVisible() : boolean;
+    setVisible(visible: boolean) : void;
+
+    getSource() : OBSSource;
+    getParentScene() : OBSScene;
 }
 
 export interface OBSSource {
@@ -28,9 +41,6 @@ export interface OBSSource {
     isEnabled() : boolean;
     setEnabled(enabled: boolean) : void;
 
-    isVisible() : boolean;
-    setVisible(visible: boolean) : void;
-
     changeOrder(order: OBSOrder) : void;
     restartMedia() : void;
     playMedia() : void;
@@ -38,6 +48,7 @@ export interface OBSSource {
     stopMedia() : void;
 
     on(signal: string, callback: (data: any)=>void) : number;
+    once(signal: string, callback: (data: any)=>void) : number;
     off(listenerId: number) : void;
 }
 

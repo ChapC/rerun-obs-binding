@@ -1,36 +1,41 @@
 #include "RerunOBSScene.h"
 #include "RerunOBSSource.h"
+#include "RerunOBSSceneItem.h"
 
-//Create a source and add it to the scene
+//Add a source to a scene, creating a SceneItem
 Napi::Value RerunOBSScene::addSource(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
 
-    if (info.Length() != 3) {
+    if (info.Length() != 1) {
         throw Napi::Error::New(env, "Invalid number of arguments");
     }
 
-    if (!info[0].IsString() | !info[1].IsString() | !info[2].IsObject()) {
+    if (!info[0].IsObject()) {
         throw Napi::Error::New(env, "Invalid arguments"); 
     }
 
-    Napi::Object sourceWrap = RerunOBSSource::constructor.New({info[0], info[1], info[2]});
     
-    //Add to this scene
-    RerunOBSSource* sourceObj = RerunOBSSource::Unwrap(sourceWrap);
-    obs_source_t* source = sourceObj->getSourceRef();
-    obs_sceneitem_t* sceneItem = obs_scene_add(this->sceneRef, source);
+    Napi::Object sourceObj = info[0].As<Napi::Object>();
+	RerunOBSSource* source = RerunOBSSource::Unwrap(sourceObj);
 
-    sourceObj->setSceneItem(sceneItem);
+    //Check that this source isn't in the scene already (Rerun does not allow duplicates)
+    if (findSceneItemForSource(source) != NULL) throw Napi::Error::New(env, "The provided source already exists in this scene");
 
-    sourceObj->stretchToFill(); //Rerun needs all sources to be stretched to fill */
-    
-    //Store a ref to the source so Node doesn't destroy it
-    sourceObjects.push_back(Napi::ObjectReference::New(sourceWrap, 1));
-    return sourceWrap;
+    Napi::Object sceneItemObj = RerunOBSSceneItem::constructor.New({ this->Value(), info[0] });
+    RerunOBSSceneItem* sceneItem = RerunOBSSceneItem::Unwrap(sceneItemObj);
+    int64_t sceneItemId = obs_sceneitem_get_id(sceneItem->getSceneItemRef());
+    sceneItemMap[sceneItemId] = Napi::ObjectReference::New(sceneItemObj, 1); //Keep a ref to this sceneItem
+
+    //Give the source a reference to its sceneitem
+    source->setSceneItem(sceneItem);
+
+    sceneItem->stretchToFill();
+
+    return sceneItemObj;
 }
 
-//Remove a source from the scene and release it
-void RerunOBSScene::removeSource(const Napi::CallbackInfo &info) {
+//Remove a source from the scene and release its sceneitem
+void RerunOBSScene::removeSceneItemNAPI(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
     
     if (info.Length() != 1) {
@@ -41,19 +46,64 @@ void RerunOBSScene::removeSource(const Napi::CallbackInfo &info) {
         throw Napi::Error::New(env, "Invalid arguments"); 
     }
 
-    Napi::Object sourceWrap = info[0].As<Napi::Object>();
-    RerunOBSSource* sourceObj = RerunOBSSource::Unwrap(sourceWrap);
-    obs_source_remove(sourceObj->getSourceRef());
-    obs_source_release(sourceObj->getSourceRef());
+    Napi::Object sceneItemObj = info[0].As<Napi::Object>();
+    RerunOBSSceneItem* sceneItem = RerunOBSSceneItem::Unwrap(sceneItemObj);
 
-    //Reset the ref for this object so Node knows it can be destroyed
-    for (int i = 0; i < sourceObjects.size(); i++) {
-        if (sourceObjects[i].Value() == sourceWrap) {
-            sourceObjects[i].Reset();
-            sourceObjects.erase(sourceObjects.begin() + i);
-            break;
-        }
+    removeSceneItem(sceneItem);
+}
+
+void RerunOBSScene::removeSceneItem(RerunOBSSceneItem* sceneItem)
+{
+    //Remove from the OBS scene
+    obs_sceneitem_remove(sceneItem->getSceneItemRef());
+
+    //Remove the source's sceneitem ref since it's no longer attached to a scene
+    sceneItem->getSource()->setSceneItem(NULL);
+
+    //Reset the ref for this NAPI object so Node knows it can be destroyed
+    auto idItemPair = sceneItemMap.find(obs_sceneitem_get_id(sceneItem->getSceneItemRef()));
+    if (idItemPair == sceneItemMap.end()) {
+        return; //This sceneitem has already been removed
     }
+    
+    idItemPair->second.Reset();
+    //Remove from the map
+    sceneItemMap.erase(idItemPair);
+}
+
+Napi::Value RerunOBSScene::findSceneItemForSourceNAPI(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    
+    if (info.Length() != 1) {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+    if (!info[0].IsObject()) {
+        throw Napi::Error::New(env, "Invalid arguments"); 
+    }
+
+    Napi::Object sourceObj = info[1].As<Napi::Object>();
+	RerunOBSSource* source = RerunOBSSource::Unwrap(sourceObj);
+    
+    RerunOBSSceneItem* sceneItem = findSceneItemForSource(source);
+    if (sceneItem == NULL) return env.Null();
+
+    return sceneItem->Value();
+}
+
+RerunOBSSceneItem* RerunOBSScene::findSceneItemForSource(RerunOBSSource* source)
+{
+    obs_sceneitem_t* targetSceneItem = obs_scene_find_source(this->sceneRef, obs_source_get_name(source->getSourceRef()));
+    if (targetSceneItem == NULL) return NULL;
+
+    int64_t targetId = obs_sceneitem_get_id(targetSceneItem);
+
+    //Find the NAPI object for this sceneitem
+    auto idItemPair = sceneItemMap.find(targetId);
+    if (idItemPair == sceneItemMap.end()) return NULL;
+
+    return RerunOBSSceneItem::Unwrap(idItemPair->second.Value());
 }
 
 Napi::Value RerunOBSScene::getName(const Napi::CallbackInfo &info) {
@@ -99,7 +149,8 @@ void RerunOBSScene::NapiInit(Napi::Env env, Napi::Object exports)
 
     Napi::Function constructFunc = DefineClass(env, "OBSScene", {
         InstanceMethod("addSource", &RerunOBSScene::addSource),
-        InstanceMethod("removeSource", &RerunOBSScene::removeSource),
+        InstanceMethod("removeSceneItem", &RerunOBSScene::removeSceneItemNAPI),
+        InstanceMethod("findSceneItemForSource", &RerunOBSScene::findSceneItemForSourceNAPI),
         InstanceMethod("getName", &RerunOBSScene::getName)
     });
 

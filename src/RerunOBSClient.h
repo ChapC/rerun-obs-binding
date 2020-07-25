@@ -3,7 +3,9 @@
 
 #include "napi.h"
 #include "RerunOBSScene.h"
+class RerunOBSScene;
 #include <atomic>
+#include <map>
 
 class RerunOBSClient : public Napi::ObjectWrap<RerunOBSClient>
 {
@@ -22,6 +24,8 @@ class RerunOBSClient : public Napi::ObjectWrap<RerunOBSClient>
         void stopStream(const Napi::CallbackInfo& info);
 
         Napi::Value getMainScene(const Napi::CallbackInfo &info);
+        Napi::Value createSource(const Napi::CallbackInfo &info);
+        void destroySource(const Napi::CallbackInfo &info);
 
         static obs_data_t* createDataFromJS(Napi::Object jsObj);
 
@@ -37,7 +41,8 @@ class RerunOBSClient : public Napi::ObjectWrap<RerunOBSClient>
         std::atomic<bool> previewWindowOpen = false;
         void runPreviewWindow();
 
-        Napi::ObjectReference mainSceneObj;
+        Napi::ObjectReference mainSceneRef;
+        std::map<const char*, Napi::ObjectReference> sourceObjectMap; //Global map of created source names to RerunOBSSources
 };
 
 #endif

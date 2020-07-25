@@ -2,6 +2,7 @@
 #include "RerunOBSClient.h"
 #include "RerunOBSScene.h"
 #include "RerunOBSSource.h"
+#include "RerunOBSSceneItem.h"
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
@@ -14,6 +15,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     RerunOBSClient::NapiInit(env, exports);
     RerunOBSScene::NapiInit(env, exports);
     RerunOBSSource::NapiInit(env, exports);
+    RerunOBSSceneItem::NapiInit(env, exports);
 
     Napi::Object rootObj = RerunOBSClient::constructor.New({});
     return rootObj;
