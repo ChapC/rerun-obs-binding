@@ -25,7 +25,7 @@ class RerunOBSSceneItem : public Napi::ObjectWrap<RerunOBSSceneItem>
         obs_sceneitem_t* getSceneItemRef() { return sceneItemRef; }
 
         void changeOrder(const Napi::CallbackInfo &info);
-        void setOrderPosition(const Napi::CallbackInfo &info);
+        void setOrderIndex(const Napi::CallbackInfo &info);
 
         void stretchToFill();
     private:

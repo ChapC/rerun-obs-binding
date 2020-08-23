@@ -31,6 +31,9 @@ export interface OBSSceneItem {
 
     getSource() : OBSSource;
     getParentScene() : OBSScene;
+
+    changeOrder(order: OBSOrder) : void;
+    setOrderIndex(index: number) : void;
 }
 
 export interface OBSSource {
@@ -41,7 +44,6 @@ export interface OBSSource {
     isEnabled() : boolean;
     setEnabled(enabled: boolean) : void;
 
-    changeOrder(order: OBSOrder) : void;
     restartMedia() : void;
     playMedia() : void;
     pauseMedia() : void;

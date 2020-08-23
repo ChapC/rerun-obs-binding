@@ -56,6 +56,40 @@ void RerunOBSSceneItem::stretchToFill()
     obs_sceneitem_set_bounds(this->sceneItemRef, &fullScreenBounds);
 }
 
+void RerunOBSSceneItem::changeOrder(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+    Napi::HandleScope scope(env);
+
+    if (info.Length() != 1)
+    {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+    if (!info[0].IsNumber())
+    {
+        throw Napi::Error::New(env, "Invalid arguments");
+    }
+
+    obs_sceneitem_set_order(this->getSceneItemRef(), static_cast<obs_order_movement>(info[0].As<Napi::Number>().Int32Value()));
+}
+
+void RerunOBSSceneItem::setOrderIndex(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+    Napi::HandleScope scope(env);
+
+    if (info.Length() != 1)
+    {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+    if (!info[0].IsNumber())
+    {
+        throw Napi::Error::New(env, "Invalid arguments");
+    }
+
+    obs_sceneitem_set_order_position(this->getSceneItemRef(), info[0].As<Napi::Number>().Int32Value());
+}
+
 //Accepts scene and source
 RerunOBSSceneItem::RerunOBSSceneItem(const Napi::CallbackInfo &info) : Napi::ObjectWrap<RerunOBSSceneItem>(info)
 {
@@ -95,7 +129,9 @@ void RerunOBSSceneItem::NapiInit(Napi::Env env, Napi::Object exports)
         InstanceMethod("isVisible", &RerunOBSSceneItem::isVisible),
         InstanceMethod("setVisible", &RerunOBSSceneItem::setVisible),
         InstanceMethod("getSource", &RerunOBSSceneItem::getSourceNAPI),
-        InstanceMethod("getParentScene", &RerunOBSSceneItem::getParentScene)
+        InstanceMethod("getParentScene", &RerunOBSSceneItem::getParentScene),
+        InstanceMethod("changeOrder", &RerunOBSSceneItem::changeOrder),
+        InstanceMethod("setOrderIndex", &RerunOBSSceneItem::setOrderIndex)
     });
 
     RerunOBSSceneItem::constructor = Napi::Persistent(constructFunc);
