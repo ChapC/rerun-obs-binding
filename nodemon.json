@@ -1,0 +1,6 @@
+{
+    "watch": ["src"],
+    "ext": ".cpp,.h",
+    "ignore": [],
+    "exec": "node-gyp --debug build"
+    }

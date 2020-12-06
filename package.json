@@ -4,6 +4,7 @@
   "description": "Node bindings for a small part of the LibOBS C library. Used by the Rerun project.",
   "gypfile": true,
   "scripts": {
+    "autobuild": "nodemon",
     "build": "node-gyp --debug build",
     "build-release": "node-gyp build",
     "rebuild": "node-gyp --debug rebuild",
@@ -17,6 +18,7 @@
     "node-addon-api": "^3.0.0"
   },
   "devDependencies": {
-    "node-gyp": "^7.0.0"
+    "node-gyp": "^7.0.0",
+    "nodemon": "^2.0.6"
   }
 }
