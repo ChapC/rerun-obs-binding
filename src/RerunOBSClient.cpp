@@ -379,11 +379,13 @@ obs_data_t *RerunOBSClient::createDataFromJS(Napi::Object jsObj)
 	return data;
 }
 
+#ifdef _WIN32
+
 //OBS preview window
 void RerunOBSClient::openPreviewWindow(const Napi::CallbackInfo &info)
 {
 	if (!previewWindowOpen) {
-		std::thread previewWindowThread(&RerunOBSClient::runPreviewWindow, this);
+		previewWindowThread = std::thread(&RerunOBSClient::runPreviewWindow, this);
 	}
 }
 
@@ -396,16 +398,40 @@ static void renderWindow(void *data, uint32_t cx, uint32_t cy)
 	UNUSED_PARAMETER(cy);
 }
 
-static LRESULT CALLBACK sceneProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	switch (message)
-	{
-	case WM_CLOSE:
-		PostQuitMessage(0);
-		break;
 
-	default:
-		return DefWindowProc(hwnd, message, wParam, lParam);
+static LRESULT CALLBACK previewWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	RerunOBSClient* obsClient;
+	if (message == WM_NCCREATE) {
+		// Cache the RerunOBSClient* that was passed in through the CreateWindowEx call so that it can be accessed later
+		CREATESTRUCT* create = reinterpret_cast<CREATESTRUCT*>(lParam);
+		RerunOBSClient* client = reinterpret_cast<RerunOBSClient*>(create->lpCreateParams);
+
+		SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR) client);
+		SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+	} else {
+		// Grab the RerunOBSClient* out of the window cache
+		obsClient = reinterpret_cast<RerunOBSClient*>(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
+	}
+
+	switch (message) {
+		case WM_SIZE: // Window resized
+		{
+			uint32_t width = LOWORD(lParam);
+			uint32_t height = HIWORD(lParam);
+			obs_display_t* obs_display = obsClient->previewWindowDisplay;
+			if (obs_display == NULL) break;
+			obs_display_resize(obs_display, width, height);
+			break;
+		}
+
+		case WM_CLOSE:
+			PostQuitMessage(0);
+			break;
+
+
+		default:
+			return DefWindowProc(hwnd, message, wParam, lParam);
 	}
 
 	return 0;
@@ -423,12 +449,23 @@ void RerunOBSClient::runPreviewWindow()
 	WNDCLASS wc = {};
 	wc.lpszClassName = TEXT("Rerun preview");
 	wc.hInstance = hInstance;
-	wc.lpfnWndProc = (WNDPROC)sceneProc;
+	wc.lpfnWndProc = (WNDPROC)previewWindowProc;
 
 	if (!RegisterClass(&wc)) {
 		std::cout << "Failed to register window class\n";
 		return;
 	}
+
+	//Create a rect that will be the same size as the video
+	RECT videoSizedRect = { 0, 0, 0, 0 };
+	obs_video_info vInfo;
+	obs_get_video_info(&vInfo);
+
+	videoSizedRect.bottom = vInfo.output_height;
+	videoSizedRect.right = vInfo.output_width;
+
+	//Adjust the rect to include window chrome
+	AdjustWindowRect(&videoSizedRect, WS_OVERLAPPEDWINDOW, false);
 
 	windowHandle = CreateWindowEx(
 		0,
@@ -436,15 +473,16 @@ void RerunOBSClient::runPreviewWindow()
 		TEXT("Rerun preview"),
 		WS_OVERLAPPEDWINDOW,
 
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		NULL,       // Parent window    
+		CW_USEDEFAULT, CW_USEDEFAULT, // Position
+		videoSizedRect.right - videoSizedRect.left, videoSizedRect.bottom - videoSizedRect.top, // Dimensions
+		NULL,       // Parent window
 		NULL,       // Menu
 		hInstance,  // Instance handle
-		NULL        // Additional application data
+		this        // Additional application data (in this case passing a pointer to this class)
 	);
 
 	if (!windowHandle) {
-		std::cout << "Failed to create preview window\n";
+		printf("Failed to create preview window - %d\n", GetLastError());
 		return;
 	}
 
@@ -463,8 +501,8 @@ void RerunOBSClient::runPreviewWindow()
 	gs_info.window.hwnd = windowHandle;
 
 	obs_display_t* obsDisplay = obs_display_create(&gs_info, 0);
-
 	obs_display_add_draw_callback(obsDisplay, renderWindow, NULL);
+	previewWindowDisplay = obsDisplay;
 
 	//Pass messages to the window - this loop will exit when the window is closed
 	MSG msg;
@@ -473,9 +511,13 @@ void RerunOBSClient::runPreviewWindow()
 		DispatchMessage(&msg);
 	}
 
+	obs_display_destroy(obsDisplay);
 	previewWindowOpen = false;
+	previewWindowDisplay = NULL;
 	std::cout << "Closed preview window\n";
 }
+
+#endif
 
 //Node native addon API init hook - tell Node which functions we're exporting from this addon
 Napi::FunctionReference RerunOBSClient::constructor;
@@ -494,9 +536,13 @@ void RerunOBSClient::NapiInit(Napi::Env env, Napi::Object exports)
 
 		InstanceMethod("startStream", &RerunOBSClient::startStream), 
 		InstanceMethod("stopStream", &RerunOBSClient::stopStream),
+
+		#ifdef _WIN32
+		InstanceMethod("openPreviewWindow", &RerunOBSClient::openPreviewWindow),
+		#endif
 		 
-		InstanceMethod("getMainScene", &RerunOBSClient::getMainScene),
-		InstanceMethod("openPreviewWindow", &RerunOBSClient::openPreviewWindow)});
+		InstanceMethod("getMainScene", &RerunOBSClient::getMainScene)		
+		});
 	RerunOBSClient::constructor = Napi::Persistent(constructFunc);
 	RerunOBSClient::constructor.SuppressDestruct();
 }

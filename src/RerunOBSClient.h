@@ -7,6 +7,10 @@ class RerunOBSScene;
 #include <atomic>
 #include <map>
 
+#ifdef _WIN32
+#include "Windows.h"
+#endif
+
 class RerunOBSClient : public Napi::ObjectWrap<RerunOBSClient>
 {
     public:
@@ -29,8 +33,12 @@ class RerunOBSClient : public Napi::ObjectWrap<RerunOBSClient>
 
         static obs_data_t* createDataFromJS(Napi::Object jsObj);
 
+        #ifdef _WIN32
         void openPreviewWindow(const Napi::CallbackInfo& info);
         void closePreviewWindow(const Napi::CallbackInfo& info);
+
+        obs_display_t* previewWindowDisplay = NULL;        
+        #endif
             
     private: //Rerun only uses one output, service, audio encoder, video encoder and scene
         obs_output_t* rtmpOut = NULL;
@@ -38,8 +46,11 @@ class RerunOBSClient : public Napi::ObjectWrap<RerunOBSClient>
         obs_encoder_t* vEncode = NULL;
         obs_encoder_t* aEncode = NULL;
 
+        #ifdef _WIN32
+        std::thread previewWindowThread;
         std::atomic<bool> previewWindowOpen = false;
         void runPreviewWindow();
+        #endif
 
         Napi::ObjectReference mainSceneRef;
         std::map<const char*, Napi::ObjectReference> sourceObjectMap; //Global map of created source names to RerunOBSSources
