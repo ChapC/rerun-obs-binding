@@ -28,10 +28,14 @@ public:
     obs_source_t* getSourceRef() { return this->sourceRef; }
     void setSceneItem(RerunOBSSceneItem* sceneItem) { this->sceneItemRef = sceneItem; }
 
-    void restartMedia(const Napi::CallbackInfo &info);
     void playMedia(const Napi::CallbackInfo &info);
     void pauseMedia(const Napi::CallbackInfo &info);
     void stopMedia(const Napi::CallbackInfo &info);
+    void restartMedia(const Napi::CallbackInfo &info);
+    Napi::Value getMediaTime(const Napi::CallbackInfo &info);
+
+    Napi::Value onceMediaTime(const Napi::CallbackInfo &info);
+    void offMediaTime(const Napi::CallbackInfo &info);
 
 private:
     obs_source_t* sourceRef;
@@ -45,6 +49,11 @@ private:
     void off(const Napi::CallbackInfo &info);
 
     static void obsSignalRepeater(void *jsEventData, calldata_t *cd);
+
+    //To facilitate onMediaTime callbacks, we add an audio_capture callback and check the media time whenever new audio data comes in. It's a hack, but I haven't thought of anything better yet.
+    JSEventProviderIntKeyed mediaTimeEventProvider;
+    bool mediaTimeCallbackActive = false;
+    static void mediaTimeAudioCallback(void *param, obs_source_t* source, const struct audio_data* audio_data, bool muted);
 };
 
 struct OBSSignalCallbackData

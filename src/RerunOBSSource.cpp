@@ -66,6 +66,10 @@ void RerunOBSSource::restartMedia(const Napi::CallbackInfo &info)
 
 void RerunOBSSource::playMedia(const Napi::CallbackInfo &info)
 {
+    if (mediaTimeEventProvider.listeners.size() > 0 && !mediaTimeCallbackActive) {
+        obs_source_add_audio_capture_callback(this->sourceRef, mediaTimeAudioCallback, this);
+        mediaTimeCallbackActive = true;
+    }
     obs_source_media_play_pause(this->sourceRef, false);
 }
 
@@ -76,7 +80,16 @@ void RerunOBSSource::pauseMedia(const Napi::CallbackInfo &info)
 
 void RerunOBSSource::stopMedia(const Napi::CallbackInfo &info)
 {
+    if (mediaTimeCallbackActive) {
+        obs_source_remove_audio_capture_callback(this->sourceRef, mediaTimeAudioCallback, this);
+        mediaTimeCallbackActive = false;
+    }
     obs_source_media_stop(this->sourceRef);
+}
+
+Napi::Value RerunOBSSource::getMediaTime(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+    return Napi::Number::New(env, obs_source_media_get_time(this->sourceRef));
 }
 
 //Accepts source name, source type and source settings
@@ -112,7 +125,7 @@ RerunOBSSource::RerunOBSSource(const Napi::CallbackInfo &info) : Napi::ObjectWra
     this->sourceRef = source;
 }
 
-//Event listeners for this class are hooked up to OBS signals
+// Event listeners for this class are hooked up to OBS signals
 Napi::Value RerunOBSSource::onNAPI(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -190,7 +203,7 @@ void RerunOBSSource::off(const Napi::CallbackInfo &info)
     }
 
     //Let JSEventProvider do its cleanup
-    JSEventProvider::off(info);
+    JSEventProvider::offNAPI(info);
 
     //Delete the callback data for this listener if it still exists
     uint32_t listenerId = info[0].As<Napi::Number>().Uint32Value();
@@ -216,6 +229,89 @@ void RerunOBSSource::obsSignalRepeater(void* customData, calldata_t* signalData)
     callbackData->parent->triggerJSEvent(callbackData->eventName);
 }
 
+// Media time listeners
+Napi::Value RerunOBSSource::onceMediaTime(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() != 2)
+    {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+    if (!info[0].IsNumber())
+    {
+        throw Napi::Error::New(env, "Invalid arguments - argument 0 must be a number");
+    }
+
+    //If the specified playback time has already passed, trigger the callback immediately
+    uint32_t timeMs = info[0].As<Napi::Number>().Uint32Value();
+    Napi::Function callback = info[1].As<Napi::Function>();
+
+    if (timeMs < obs_source_media_get_time(this->sourceRef)) {
+        callback.Call({});
+        return Napi::Number::New(env, 0);
+    }
+
+    //Let JSEventProvider store the JS listener
+    Napi::Value napiListenerId = mediaTimeEventProvider.once(info);
+    uint32_t listenerId = napiListenerId.As<Napi::Number>().Uint32Value();
+
+    if (!mediaTimeCallbackActive) {
+        //Register the mediaTimeAudio callback
+        obs_source_add_audio_capture_callback(this->sourceRef, mediaTimeAudioCallback, this);
+        mediaTimeCallbackActive = true;
+    }
+
+    return napiListenerId;
+}
+
+void RerunOBSSource::offMediaTime(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() != 1)
+    {
+        throw Napi::Error::New(env, "Invalid number of arguments");
+    }
+
+    if (!info[0].IsNumber())
+    {
+        throw Napi::Error::New(env, "Invalid arguments");
+    }
+
+    mediaTimeEventProvider.offNAPI(info);
+
+    if (mediaTimeCallbackActive && mediaTimeEventProvider.listeners.size() == 0) {
+        //Switch off the callback if no more mediaTimeListeners are active
+        obs_source_remove_audio_capture_callback(sourceRef, mediaTimeAudioCallback, this);
+        mediaTimeCallbackActive = false;
+    }
+}
+
+void RerunOBSSource::mediaTimeAudioCallback(void* param, obs_source_t* source, const struct audio_data* audio_data, bool muted) {
+    RerunOBSSource* parent = (RerunOBSSource*) param;
+
+    uint32_t currentPlaybackMs = obs_source_media_get_time(parent->sourceRef);
+    
+    //Iterate over each registered listener and see if its playback time has passed
+    std::map<uint32_t, std::vector<JSCallback>>* listenersMap = &parent->mediaTimeEventProvider.listeners;
+    std::map<uint32_t, std::vector<JSCallback>>::iterator it;
+    for (it = listenersMap->begin(); it != listenersMap->end(); it++) {
+        uint32_t eventTimeMs = it->first;
+        if (currentPlaybackMs > eventTimeMs) {
+            parent->mediaTimeEventProvider.triggerJSEvent(eventTimeMs);
+
+            //Below commented out because trying to remove the callback here causes OBS to hang. I guess that's not allowed?
+            // //Switch off this callback if no more mediaTimeListeners are active
+            // if (listenersMap->size() == 0) {
+            //     parent->mediaTimeCallbackActive = false;
+            //     obs_source_remove_audio_capture_callback(parent->sourceRef, mediaTimeAudioCallback, parent);
+            // }
+
+            break; //Only one event is fired per audio callback. If there are more, they will be picked up on the next callback
+        }
+    }
+}
+
 //NAPI initializers
 
 Napi::FunctionReference RerunOBSSource::constructor;
@@ -229,12 +325,15 @@ void RerunOBSSource::NapiInit(Napi::Env env, Napi::Object exports)
         InstanceMethod("isEnabled", &RerunOBSSource::isEnabled), 
         InstanceMethod("setEnabled", &RerunOBSSource::setEnabled),
         InstanceMethod("updateSettings", &RerunOBSSource::updateSettings),
-        InstanceMethod("restartMedia", &RerunOBSSource::restartMedia),
         InstanceMethod("playMedia", &RerunOBSSource::playMedia),
         InstanceMethod("pauseMedia", &RerunOBSSource::pauseMedia),
         InstanceMethod("stopMedia", &RerunOBSSource::stopMedia),
+        InstanceMethod("restartMedia", &RerunOBSSource::restartMedia),
+        InstanceMethod("getMediaTime", &RerunOBSSource::getMediaTime),
+        InstanceMethod("onceMediaTime", &RerunOBSSource::onceMediaTime),
+        InstanceMethod("offMediaTime", &RerunOBSSource::offMediaTime),
         //JSEventProvider
-        InstanceMethod("on", &RerunOBSSource::onNAPI), InstanceMethod("once", &RerunOBSSource::once), InstanceMethod("off", &RerunOBSSource::off)
+        InstanceMethod("on", &RerunOBSSource::onNAPI), InstanceMethod("once", &RerunOBSSource::once), InstanceMethod("off", &RerunOBSSource::offNAPI)
     });
 
     RerunOBSSource::constructor = Napi::Persistent(constructFunc);

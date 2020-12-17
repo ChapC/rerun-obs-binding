@@ -2,7 +2,10 @@
     "targets": [
         {
             "target_name": "RerunOBSBinding",
-            "sources": ["src/RerunOBSBinding.cpp", "src/RerunOBSClient.cpp", "src/RerunOBSScene.cpp", "src/RerunOBSSource.cpp", "src/RerunOBSSceneItem.cpp", "src/JSEventProvider.cpp"],
+            "sources": [
+                "src/RerunOBSBinding.cpp", "src/RerunOBSClient.cpp", "src/RerunOBSScene.cpp", "src/RerunOBSSource.cpp", 
+                "src/RerunOBSSceneItem.cpp", "src/JSEventProvider.cpp", "src/JSEventProviderIntKeyed.cpp"
+            ],
             "include_dirs": [
                 "<!@(node -p \"require('node-addon-api').include\")",
                 "obs/src/libobs"

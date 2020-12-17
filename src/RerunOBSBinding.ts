@@ -44,10 +44,21 @@ export interface OBSSource {
     isEnabled() : boolean;
     setEnabled(enabled: boolean) : void;
 
-    restartMedia() : void;
     playMedia() : void;
     pauseMedia() : void;
     stopMedia() : void;
+    restartMedia() : void;
+    getMediaTime() : number;
+
+    /**
+     * Register a one-time callback to fire after the source's media time
+     * passes a certain number of milliseconds. If the specified time has
+     * already passed when this method is called, the callback will fire immediately.
+     * @param timeMs The time in milliseconds the callback should be triggered after
+     * @param callback Function to run once timeMs is reached
+     */
+    onceMediaTime(timeMs: number, callback: () => void) : number;
+    offMediaTime(listenerId: number) : void;
 
     on(signal: string, callback: (data: any)=>void) : number;
     once(signal: string, callback: (data: any)=>void) : number;
