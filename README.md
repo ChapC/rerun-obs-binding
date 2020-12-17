@@ -18,7 +18,7 @@ I've left lots of comments in here as I've trudged my way through OBS and node-a
 ### Building
 *Disclaimer - I know very little about C++ build systems and they make me ✨very scared💫*
 
-The library is built using node-gyp. It requires NPM, Python, and headers and a .LIB file from a build of OBS. I ~hope~ this is cross-platform (for any platform Node + OBS supports), but I've only tested it on Windows 10.
+The library is built using node-gyp. It requires NPM, Python, and headers and a .LIB file from a build of OBS. I *hope* this is cross-platform (for any platform Node + OBS supports), but I've only tested it on Windows 10.
 
 Here's how you can build the thing:
 1. Clone this repository and `cd` into it from the command line.
