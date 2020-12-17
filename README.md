@@ -3,7 +3,7 @@
 This library wraps a small portion of libOBS and exposes it to Node.JS apps via the Node native addons API.
 The output of this project is a .node file you can `require()` in Javascript. [Rerun](https://github.com/ChapC/rerun) uses it to manage its own instance of [OBS](https://github.com/obsproject/obs-studio).
 
-[RerunOBSBinding.ts](RerunOBSBinding.ts) shows the functions this binding currently supports. 
+[RerunOBSBinding.ts](src/RerunOBSBinding.ts) shows the functions this binding currently supports. 
 At the moment it's designed only for use in Rerun, so it's missing a few features that prevent it from being a fully-featured binding. Namely,
 
 - Scene creation/destruction. Rerun only uses one scene, accessible via `getMainScene`.
@@ -11,14 +11,14 @@ At the moment it's designed only for use in Rerun, so it's missing a few feature
 - On-the-fly configuration of A/V encoders. Currently they are set up once during the `init` function and the instance must be restarted to modify them.
 - Manual control of Outputs and Services. The binding is hard-coded to hook A/V encoders to RTMP output to RTMP service, both with default settings. The only exposed controls of these components are the `startStream` and `stopStream` functions, where you can pass the RTMP service an address and a stream key.
 
-Implementing these features shouldn't be too tricky, I just haven't because Rerun just doesn't need them at the moment
+Implementing these features shouldn't be too tricky, I just haven't because Rerun just doesn't need them at the moment.
 
 I've left lots of comments in here as I've trudged my way through OBS and node-addon-api, so I hope this repo can be useful to anyone who's interested in learning about either. Feel free to open any issues for questions, or submit a pull request if you'd like to take a swing at one of the missing features.
 
 ### Building
 *Disclaimer - I know very little about C++ build systems and they make me ✨very scared💫*
 
-The library is built using node-gyp. It requires NPM, Python, and headers and a .LIB file from a build of OBS. I *hope* this is cross-platform (for any platform Node + OBS supports), but I've only tested it on Windows 10.
+The library is built using node-gyp. It requires NPM, Python, and few files from a build of OBS. I *hope* this is cross-platform (for any platform Node + OBS supports), but I've only tested it on Windows 10.
 
 Here's how you can build the thing:
 1. Clone this repository and `cd` into it from the command line.
