@@ -11,7 +11,7 @@
                 "obs/src/libobs"
             ],
             "libraries": [
-                "../obs/bin/obs.lib"
+                "../obs/obs.lib"
             ],
 
             # Enable C++ -> JS exception propagation
