@@ -29,6 +29,8 @@ Here's how you can build the thing:
 6. Run `node-gyp configure` to generate C++ project files.
 7. Run `npm build` to build the binding.
 
+The output binary links with OBS at runtime, so you'll need to have built OBS libraries (found in the build/rundir/Debug/bin/64bit folder of the OBS project) in the same folder as RerunOBSBinding.node when running your app. If Node is giving you "The specified module could not be found" when you `require()` the module, it's probably having trouble finding some of those libraries.
+
 ### License
 ISC License
 
